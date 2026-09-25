@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Horario Híbrido</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .cell-btn { transition: transform .08s ease, box-shadow .08s ease; }
+    .cell-btn:hover { transform: translateY(-1px); box-shadow: 0 2px 6px rgb(0 0 0 / .08); }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased">
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-20">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center gap-3">
+      <div class="flex items-center gap-2">
+        <div class="w-9 h-9 rounded-lg bg-indigo-600 text-white grid place-items-center font-bold">H</div>
+        <div>
+          <h1 class="text-lg font-semibold leading-tight">Gestor de Horario Híbrido</h1>
+          <p class="text-xs text-slate-500">Planificación remoto / presencial con reglas y cobertura</p>
+        </div>
+      </div>
+      <div class="ml-auto flex flex-wrap gap-2">
+        <button id="btn-generate" class="px-3 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700">Regenerar horario</button>
+        <button id="btn-export" class="px-3 py-2 rounded-lg bg-white border border-slate-300 text-sm hover:bg-slate-100">Exportar CSV</button>
+        <button id="btn-reset" class="px-3 py-2 rounded-lg bg-white border border-slate-300 text-sm text-rose-600 hover:bg-rose-50">Restablecer</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 py-6 grid gap-6 lg:grid-cols-3">
+    <!-- Columna de configuración -->
+    <section class="space-y-6 lg:col-span-1">
+      <div class="bg-white rounded-xl border border-slate-200 shadow-sm">
+        <div class="flex items-center justify-between px-4 py-3 border-b border-slate-100">
+          <h2 class="font-semibold">Equipo</h2>
+          <button id="btn-add" class="px-3 py-1.5 rounded-lg bg-indigo-50 text-indigo-700 text-sm font-medium hover:bg-indigo-100">+ Añadir</button>
+        </div>
+        <ul id="team-list" class="divide-y divide-slate-100"></ul>
+      </div>
+
+      <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4 space-y-5">
+        <h2 class="font-semibold">Reglas globales</h2>
+
+        <label class="block">
+          <span class="text-sm font-medium">Mínimo presencial por día</span>
+          <div class="mt-1 flex items-center gap-2">
+            <input id="min-office" type="number" min="0" max="50" class="w-24 rounded-lg border-slate-300 border px-3 py-1.5 text-sm" />
+            <span class="text-xs text-slate-500">persona(s) en oficina</span>
+          </div>
+        </label>
+
+        <div>
+          <span class="text-sm font-medium">Esquema de generación</span>
+          <div id="mode-toggle" class="mt-1 grid grid-cols-2 rounded-lg border border-slate-300 overflow-hidden text-sm">
+            <button data-mode="fixed" class="py-1.5">Fijo semanal</button>
+            <button data-mode="rotation" class="py-1.5">Rotatorio N semanas</button>
+          </div>
+        </div>
+
+        <div id="rotation-opts" class="space-y-4">
+          <div>
+            <span class="text-sm font-medium">Días de alta demanda</span>
+            <p class="text-xs text-slate-500">Días que todos quieren remotos; se rotan de forma equitativa.</p>
+            <div id="hd-days" class="mt-2 flex gap-1.5"></div>
+          </div>
+          <div>
+            <span class="text-sm font-medium">Duración del ciclo</span>
+            <div class="mt-1 flex items-center gap-3">
+              <input id="weeks" type="number" min="1" max="52" class="w-24 rounded-lg border-slate-300 border px-3 py-1.5 text-sm disabled:bg-slate-100 disabled:text-slate-400" />
+              <label class="flex items-center gap-1.5 text-sm">
+                <input id="weeks-auto" type="checkbox" class="rounded" /> Auto (= nº personas)
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="warnings" class="hidden bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800"></div>
+
+      <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4 text-xs text-slate-600 space-y-2">
+        <h3 class="font-semibold text-slate-800 text-sm">Leyenda</h3>
+        <div class="flex flex-wrap gap-2">
+          <span class="px-2 py-1 rounded bg-sky-100 text-sky-800">Remoto</span>
+          <span class="px-2 py-1 rounded bg-white border border-slate-300">Oficina</span>
+          <span class="px-2 py-1 rounded bg-emerald-100 text-emerald-800">Cobertura ok</span>
+          <span class="px-2 py-1 rounded bg-rose-100 text-rose-800">Alerta oficina</span>
+          <span class="px-2 py-1 rounded ring-2 ring-amber-400">Rompe una regla</span>
+        </div>
+        <p>Haz clic en una celda del horario para alternar Remoto / Oficina manualmente. Cualquier cambio en el equipo o en las reglas vuelve a generar el horario.</p>
+      </div>
+    </section>
+
+    <!-- Columna de resultados -->
+    <section class="lg:col-span-2 space-y-6">
+      <div id="stats" class="grid grid-cols-2 md:grid-cols-4 gap-3"></div>
+
+      <div id="rotation-matrix-card" class="hidden bg-white rounded-xl border border-slate-200 shadow-sm">
+        <div class="px-4 py-3 border-b border-slate-100">
+          <h2 class="font-semibold">Matriz de rotación</h2>
+          <p class="text-xs text-slate-500">Días remotos de cada persona por semana. Pulsa una semana para ver el detalle.</p>
+        </div>
+        <div id="rotation-matrix" class="overflow-x-auto"></div>
+      </div>
+
+      <div class="bg-white rounded-xl border border-slate-200 shadow-sm">
+        <div class="px-4 py-3 border-b border-slate-100 flex flex-wrap items-center gap-2">
+          <h2 id="schedule-title" class="font-semibold">Horario semanal</h2>
+          <div id="week-tabs" class="ml-auto flex flex-wrap gap-1"></div>
+        </div>
+        <div id="schedule" class="overflow-x-auto"></div>
+      </div>
+
+      <div id="equity-card" class="hidden bg-white rounded-xl border border-slate-200 shadow-sm">
+        <div class="px-4 py-3 border-b border-slate-100">
+          <h2 class="font-semibold">Equidad del ciclo</h2>
+          <p class="text-xs text-slate-500">Veces que cada persona trabaja en remoto los días de alta demanda.</p>
+        </div>
+        <div id="equity" class="overflow-x-auto"></div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Modal de integrante -->
+  <div id="modal" class="hidden fixed inset-0 z-30 bg-slate-900/40 grid place-items-center p-4">
+    <form id="person-form" class="bg-white rounded-xl shadow-xl w-full max-w-lg p-5 space-y-4">
+      <div class="flex items-center justify-between">
+        <h2 id="modal-title" class="text-lg font-semibold">Añadir integrante</h2>
+        <button type="button" data-close class="text-slate-400 hover:text-slate-600 text-xl leading-none">&times;</button>
+      </div>
+      <div class="grid grid-cols-3 gap-3">
+        <label class="col-span-2 block">
+          <span class="text-sm font-medium">Nombre</span>
+          <input id="f-name" required maxlength="40" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm" />
+        </label>
+        <label class="block">
+          <span class="text-sm font-medium">Días remotos</span>
+          <input id="f-remote" type="number" min="0" max="5" required class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm" />
+        </label>
+      </div>
+      <div>
+        <span class="text-sm font-medium">Reglas por día</span>
+        <div id="f-rules" class="mt-2 grid grid-cols-5 gap-2"></div>
+      </div>
+      <p id="f-error" class="hidden text-sm text-rose-600"></p>
+      <div class="flex justify-end gap-2 pt-2">
+        <button type="button" data-close class="px-3 py-2 rounded-lg border border-slate-300 text-sm hover:bg-slate-100">Cancelar</button>
+        <button type="submit" class="px-3 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700">Guardar</button>
+      </div>
+    </form>
+  </div>
+
+  <script src="js/scheduler.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
