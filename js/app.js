@@ -349,7 +349,13 @@
       const cov = S.officeCounts(state.team, w);
       lines.push([i + 1, 'En oficina', ...cov].join(','));
     });
-    const blob = new Blob(['﻿' + lines.join('\n')], { type: 'text/csv;charset=utf-8' });
+    return lines.join('\n');
+  }
+
+  function exportCsv() {
+    const text = csvText();
+    if (!text) return;
+    const blob = new Blob(['\ufeff' + text], { type: 'text/csv;charset=utf-8' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = `horario-hibrido-${state.config.mode === 'rotation' ? 'rotatorio' : 'fijo'}.csv`;
