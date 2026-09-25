@@ -22,7 +22,8 @@
       </div>
       <div class="ml-auto flex flex-wrap gap-2">
         <button id="btn-generate" class="px-3 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700">Regenerar horario</button>
-        <button id="btn-export" class="px-3 py-2 rounded-lg bg-white border border-slate-300 text-sm hover:bg-slate-100">Exportar CSV</button>
+        <button id="btn-copy" class="px-3 py-2 rounded-lg bg-white border border-slate-300 text-sm hover:bg-slate-100">Copiar CSV</button>
+        <button id="btn-export" class="px-3 py-2 rounded-lg bg-white border border-slate-300 text-sm hover:bg-slate-100">Descargar CSV</button>
         <button id="btn-reset" class="px-3 py-2 rounded-lg bg-white border border-slate-300 text-sm text-rose-600 hover:bg-rose-50">Restablecer</button>
       </div>
     </div>
@@ -149,6 +150,19 @@
       </div>
     </form>
   </div>
+
+  <!-- Diálogo de confirmación -->
+  <div id="confirm" class="hidden fixed inset-0 z-40 bg-slate-900/40 grid place-items-center p-4">
+    <div class="bg-white rounded-xl shadow-xl w-full max-w-sm p-5 space-y-4">
+      <p id="confirm-msg" class="text-sm"></p>
+      <div class="flex justify-end gap-2">
+        <button id="confirm-no" class="px-3 py-2 rounded-lg border border-slate-300 text-sm hover:bg-slate-100">Cancelar</button>
+        <button id="confirm-yes" class="px-3 py-2 rounded-lg bg-rose-600 text-white text-sm font-medium hover:bg-rose-700">Confirmar</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="hidden fixed bottom-4 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-lg bg-slate-900 text-white text-sm shadow-lg"></div>
 
   <script src="js/scheduler.js"></script>
   <script src="js/app.js"></script>

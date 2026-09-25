@@ -337,9 +337,9 @@
 
   // ---------- Export ----------
 
-  function exportCsv() {
+  function csvText() {
     const sch = state.schedule;
-    if (!sch) return;
+    if (!sch) return '';
     const lines = [['Semana', 'Integrante', ...DAYS].join(',')];
     sch.weeks.forEach((w, i) => {
       state.team.forEach((p) => {
@@ -357,6 +357,37 @@
     URL.revokeObjectURL(a.href);
   }
 
+  function copyCsv() {
+    const text = csvText();
+    if (!text) return;
+    navigator.clipboard.writeText(text)
+      .then(() => toast('CSV copiado al portapapeles'))
+      .catch(() => toast('No se pudo copiar; usa Descargar CSV'));
+  }
+
+  let toastTimer = null;
+  function toast(msg) {
+    const t = $('#toast');
+    t.textContent = msg;
+    t.classList.remove('hidden');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.add('hidden'), 2200);
+  }
+
+  // Confirmación dentro de la página (algunos entornos bloquean window.confirm).
+  let pendingConfirm = null;
+  function askConfirm(msg, onYes) {
+    pendingConfirm = onYes;
+    $('#confirm-msg').textContent = msg;
+    $('#confirm').classList.remove('hidden');
+  }
+  function closeConfirm(accept) {
+    $('#confirm').classList.add('hidden');
+    const fn = pendingConfirm;
+    pendingConfirm = null;
+    if (accept && fn) fn();
+  }
+
   // ---------- Eventos ----------
 
   document.addEventListener('click', (e) => {
@@ -365,17 +396,21 @@
     if (t.id === 'btn-add') return openModal(null);
     if (t.id === 'btn-generate') return commit();
     if (t.id === 'btn-export') return exportCsv();
+    if (t.id === 'btn-copy') return copyCsv();
+    if (t.id === 'confirm-yes') return closeConfirm(true);
+    if (t.id === 'confirm-no') return closeConfirm(false);
     if (t.id === 'btn-reset') {
-      if (confirm('¿Restablecer el equipo y las reglas por defecto?')) { state = defaultState(); commit(); }
-      return;
+      return askConfirm('¿Restablecer el equipo y las reglas por defecto?', () => { state = defaultState(); commit(); });
     }
     if (t.hasAttribute('data-close')) return closeModal();
     if (t.dataset.edit) return openModal(state.team.find((p) => p.id === t.dataset.edit));
     if (t.dataset.del) {
       const p = state.team.find((x) => x.id === t.dataset.del);
-      if (p && confirm(`¿Eliminar a ${p.name} del equipo?`)) {
-        state.team = state.team.filter((x) => x.id !== p.id);
-        commit();
+      if (p) {
+        askConfirm(`¿Eliminar a ${p.name} del equipo?`, () => {
+          state.team = state.team.filter((x) => x.id !== p.id);
+          commit();
+        });
       }
       return;
     }
@@ -416,7 +451,7 @@
     if (s) s.className = `mt-1 w-full rounded-lg border-2 px-1 py-1.5 text-xs ${RULE_META[s.value].select}`;
   });
   $('#modal').addEventListener('click', (e) => { if (e.target.id === 'modal') closeModal(); });
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { closeModal(); closeConfirm(false); } });
 
   if (!state.schedule) generate();
   render();
