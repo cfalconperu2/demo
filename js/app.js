@@ -145,11 +145,14 @@
     ].join('');
   }
 
-  function remoteLetters(mask) {
+  function remoteDayChips(mask) {
     const hd = state.config.hdDays;
-    return SHORT.map((s, d) => S.isRemote(mask, d)
-      ? `<span class="${hd.includes(d) ? 'text-amber-600 font-bold' : ''}">${s}</span>`
-      : '').filter(Boolean).join(' ') || '<span class="text-slate-400">—</span>';
+    const chips = DAYS.map((name, d) => S.isRemote(mask, d)
+      ? `<span class="inline-block px-2 py-0.5 rounded-md text-xs font-medium ${hd.includes(d) ? 'bg-amber-100 text-amber-800 ring-1 ring-amber-300' : 'bg-sky-100 text-sky-800'}">${name}</span>`
+      : '').filter(Boolean);
+    return chips.length
+      ? `<div class="flex flex-wrap justify-center gap-1">${chips.join('')}</div>`
+      : '<span class="text-slate-400">Sin remoto</span>';
   }
 
   function renderMatrix() {
@@ -169,7 +172,7 @@
     const rows = state.team.map((p) => `
       <tr class="border-t border-slate-100">
         <td class="px-3 py-2 font-medium whitespace-nowrap sticky left-0 bg-white">${esc(p.name)}</td>
-        ${weeks.map((w, i) => `<td class="px-2 py-2 text-center text-xs whitespace-nowrap ${i === state.activeWeek ? 'bg-indigo-50' : ''}">${remoteLetters(w[p.id] ?? 0)}</td>`).join('')}
+        ${weeks.map((w, i) => `<td class="px-2 py-2 text-center text-xs min-w-[150px] ${i === state.activeWeek ? 'bg-indigo-50' : ''}">${remoteDayChips(w[p.id] ?? 0)}</td>`).join('')}
       </tr>`).join('');
     $('#rotation-matrix').innerHTML = `
       <table class="min-w-full text-sm">
